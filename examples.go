@@ -308,6 +308,65 @@ func testFunctions() {
 
 
 // ==========
+// Methods
+// ==========
+
+type State struct { id, code string }
+
+func (s *State) toString() string { // State is the receiver
+   return s.code + " " + s.id
+}
+
+func (s *State) setCode(code string) *State {
+   s.code = code                  // Receiver needs to be a pointer otherwise
+   return s                       // we will modify a copy (pass by value)
+}
+
+type MyByte byte
+func (b MyByte) reverse() MyByte {  // Method on value type
+   return ^b
+}
+
+func testMethods() {
+   fmt.Println("=== METHODS ===")
+
+   fmt.Println((&State{"25", "CA"}).toString()) // CA 25
+   fmt.Println((&State{"25", "CA"}).setCode("CB")) // &{25 CB}
+   fmt.Println(MyByte(7).reverse()) // 248
+}
+
+
+// ==========
+// Interfaces
+// ==========
+
+// 'implements' implicit. No way/need to specify.
+
+type Processor struct {}
+func (p *Processor) eval() bool { return true }
+
+type Calculator struct {}
+func (c *Calculator) eval() bool { return false }
+
+type Evaluable interface {
+   eval() bool
+}
+func process(e Evaluable) bool {return e.eval()}
+
+func testInterfaces() {
+   fmt.Println("=== INTERFACES ===")
+
+   fmt.Println(process(&Processor{}))   // true
+   fmt.Println(process(&Calculator{}))  // false
+}
+
+
+// ==========
+// Goroutines
+// ==========
+
+
+// ==========
 // Channels
 // ==========
 
@@ -356,5 +415,7 @@ func main() {
    testRanges()
    testMaps()
    testFunctions()
+   testMethods()
+   testInterfaces()
    testChannels()
 }
