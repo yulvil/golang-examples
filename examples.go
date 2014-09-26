@@ -64,9 +64,6 @@ func testVariables() {
    var aa,bb,cc = 10, false, "ok" // type can be omitted
    fmt.Println(aa,bb,cc)          // 10 false ok
 
-   //var aa,bb,cc int = {3,2,1}
-   //fmt.Println(a,b,c)
-
    xyz := 989                     // short syntax available inside functions
    fmt.Println(xyz)               // 989
 
@@ -121,15 +118,6 @@ func testControlStatements() {
 type Point struct {
    x int
    y int
-}
-
-type Item struct {
-   t byte
-//   v union {
-//      s string
-//      i int
-//      b byte
-//   }
 }
 
 func testStructs() {
