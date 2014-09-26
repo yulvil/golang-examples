@@ -55,6 +55,7 @@ func testVariables() {
    var z bool;                    // Has default value.
    var (q = 5
         r = 6)                    // Multiple declarations
+   var _ = x                      // Blank identifier will discard the value
    fmt.Println(x,y,z,q,r)         // 5 8 false 5 6
 
    var a,b,c int = 3,2,1          // Multiple assignments. Numbers must match.
@@ -122,6 +123,15 @@ type Point struct {
    y int
 }
 
+type Item struct {
+   t byte
+//   v union {
+//      s string
+//      i int
+//      b byte
+//   }
+}
+
 func testStructs() {
    fmt.Println("=== STRUCTS ===")
 
@@ -154,7 +164,7 @@ func testArrays() {
    arr[0] = "A"
    arr[1] = string('X')
    arr[2] = "C"
-   fmt.Println(arr)               // [A X C]
+   fmt.Println(arr, len(arr))     // [A X C] 3
 
    var arr2 = [...]int{9,8,7,6,5} // ... will calculate the array length
    fmt.Println(reflect.TypeOf(arr), reflect.TypeOf(arr2)) // [3]string [5]int
@@ -227,6 +237,9 @@ func testMaps() {
    m["key1"] = "value1"
    m["key2"] = "value2"
    fmt.Println(m, m["key2"])      // map[key2:value2 key1:value1] value2
+   for k,v := range m {           // iterate over keys
+      fmt.Println(k,v)
+   }
 
    m2 := map[string]int { "key1": 10, "key2": 20, }
    fmt.Println(m2, m2["key2"])    // map[key1:10 key2:20] 20
@@ -250,6 +263,7 @@ func testMaps() {
 
 // Can be called before being declared
 // Nested functions not allowed
+// Everything is pass by value
 
 func add(x int, y int) int {
    return x + y
@@ -271,14 +285,10 @@ func adder(i int) func(int) int {   // Closure
 
 type binFunc func(int, int) int
 
-func mkAdd(a int) func(...int) int {
-    return func(b... int) int {
-        for _, i := range b {
-            a += i
-        }
-        return a
-    }
-}
+func leak() *int {
+  var i int = 88
+  return &i                       // local variable will be accessible
+}                                 // as long as there is a reference to it
 
 func testFunctions() {
    fmt.Println("=== FUNCTIONS ===")
@@ -304,6 +314,8 @@ func testFunctions() {
    fmt.Println(f3(5,6))           // 11
    f3 = binFunc(sub)              // "cast" sub as a binFunc
    fmt.Println(f3(5,6))           // -1
+
+   fmt.Println(*leak())           // 88
 }
 
 
@@ -358,6 +370,18 @@ func testInterfaces() {
 
    fmt.Println(process(&Processor{}))   // true
    fmt.Println(process(&Calculator{}))  // false
+
+   // Check if value implements Evaluable
+   var isEvaluable = func (any interface{}) bool {
+      if _, ok := any.(Evaluable); ok {
+         return true
+      }
+      return false
+   }
+   fmt.Println(isEvaluable(2),            // false
+               isEvaluable(&Processor{}), // true
+               isEvaluable(&Processor{}), // true
+               isEvaluable(&Point{}))     // false
 }
 
 
