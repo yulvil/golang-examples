@@ -4,8 +4,11 @@ import "fmt"
 import "reflect"
 
 import (
-//    "encoding/json"   // Compile error if import not used
-    "math/rand"
+   // "encoding/json"   // Compile error if import not used
+   "math/rand"
+   "strconv"
+   "time"
+   //"net/http"
 )
 
 // Comment
@@ -33,6 +36,14 @@ func testTypes() {
    var i int = 2055
    var h byte = byte(i)           // Explicit cast required. Precision loss silently.
    fmt.Println(h)                 // 7
+
+   // Strings are immutable
+   a := "abc" + "123"             // String concat
+   b := "def" +  strconv.FormatInt(456, 10)   // String concat
+   c := string("xyz"[1])          // String concat
+   d := append([]string{}, "abc") // Append preferable in a loop
+   e := fmt.Sprintf("jhi%d", 789) // String concat
+   fmt.Println(a,b,c,d,e)         // abc123 def456 y [abc] jhi789
 }
 
 // ==========
@@ -120,6 +131,16 @@ type Point struct {
    y int
 }
 
+type Model struct {
+   name string
+}
+func (m *Model) call() int {return 10}
+
+type Road struct {
+   Model                          // Embedded type. No name.
+   loc string
+}
+
 func testStructs() {
    fmt.Println("=== STRUCTS ===")
 
@@ -136,6 +157,10 @@ func testStructs() {
    var u *Point = new(Point)              // Pointer to newly allocated Point
    v := new(Point)                        // same
    fmt.Println(u, v)                      // &{0, 0} &{0, 0}
+
+   r := new(Road)
+   fmt.Println(r.Model.call())            // Call embedded type using type name
+   fmt.Println(r.call())                  // Omit embedded type
 }
 
 
@@ -167,6 +192,7 @@ func testArrays() {
 // ==========
 
 // Slices do not have element count
+// A slice is a struct describing a section of an array
 
 func testSlices() {
    fmt.Println("=== SLICES ===")
@@ -199,6 +225,8 @@ func testSlices() {
 // Ranges
 // ==========
 
+// Iterate over string, array, slice, map, channel
+
 func testRanges() {
    fmt.Println("=== RANGES ===")
 
@@ -211,6 +239,9 @@ func testRanges() {
    }
    for i := range arr {           // Ignore value
       fmt.Println(i)
+   }
+   for _, c := range "abc123" {
+      fmt.Printf("%c\n", c)
    }
 }
 
@@ -242,6 +273,9 @@ func testMaps() {
    fmt.Println(p)                 // {3,4}
    value, contains := m3["key9"]  // zero value for type Point
    fmt.Println(value, contains)   // {0,0} false
+
+   m4 := map[string]int{}         // same as using make
+   delete(m4, "key8")             // silent, no return values
 }
 
 
@@ -377,6 +411,17 @@ func testInterfaces() {
 // Goroutines
 // ==========
 
+func testGoroutines() {
+   fmt.Println("=== GOROUTINES ===")
+
+   f := func(i int) {
+      fmt.Println("go ", i)
+   }
+   for i:=0; i<5; i++ {
+      go f(i)                     // Not necessarily in order
+   }
+}
+
 
 // ==========
 // Channels
@@ -417,6 +462,23 @@ func testChannels() {
    }
 }
 
+
+// ==========
+// Misc
+// ==========
+
+func testMisc() {
+   fmt.Println("=== MISC ===")
+
+   defer fmt.Println("clean up")  // Called after the func exits
+   fmt.Println("make a mess")
+
+   time.Sleep(5 * time.Millisecond)
+
+   // panic(http.ListenAndServe(":8080", http.FileServer(http.Dir("/usr/share/doc"))))
+}
+
+
 func main() {
    testTypes()
    testVariables()
@@ -429,5 +491,7 @@ func main() {
    testFunctions()
    testMethods()
    testInterfaces()
+   testGoroutines()
    testChannels()
+   testMisc()
 }
