@@ -4,11 +4,12 @@ import "fmt"
 import "reflect"
 
 import (
-   // "encoding/json"   // Compile error if import not used
+   "encoding/json"
    "math/rand"
    "strconv"
    "time"
-   //"net/http"
+   "net/http"
+   //"crypto"                     // Compile error if import not used
 )
 
 // Comment
@@ -43,7 +44,18 @@ func testTypes() {
    c := string("xyz"[1])          // String concat
    d := append([]string{}, "abc") // Append preferable in a loop
    e := fmt.Sprintf("jhi%d", 789) // String concat
+   f := `\r\n
+         \u12e4`                  // Raw string. Multiline.
    fmt.Println(a,b,c,d,e)         // abc123 def456 y [abc] jhi789
+   fmt.Println(f)                 // the raw string including all the spaces
+
+   type MyInt int                 // Uppercase types are exported
+
+   s := make([]int, 2)            // pointers to build-in structures are using make, not new
+                                  // make's return type is the same as the first parameter
+   t := new(MyInt)                // new returns a pointer to the type
+   *t = 6
+   _,_ = s,t
 }
 
 // ==========
@@ -87,6 +99,27 @@ func testVariables() {
    fmt.Println(reflect.TypeOf(PI), reflect.TypeOf(zz)) // float64 int
 
    { var i=0; var j=1; i = i+j; } // i, j only accessible within block
+
+   const (
+      Monday = 1
+      Tuesday = 2
+      Wednesday = 3
+   )
+
+   const (
+      Mon = iota                  // iota starts at zero
+      Tue                         // incremented automatically
+      Wed                         // within the same const ()
+   )
+   fmt.Println(Mon,Tue,Wed)       // 0 1 2
+
+   type Letter rune               // Simulate enum
+   const (
+      A Letter = 97 + iota
+      B
+      C
+   )
+   fmt.Println(A,B,C)             // 97 98 99
 }
 
 // ==========
@@ -127,7 +160,7 @@ func testControlStatements() {
 // ==========
 
 type Point struct {
-   x int
+   x int   "my tag"
    y int
 }
 
@@ -161,6 +194,11 @@ func testStructs() {
    r := new(Road)
    fmt.Println(r.Model.call())            // Call embedded type using type name
    fmt.Println(r.call())                  // Omit embedded type
+
+   field1, ok1 := reflect.TypeOf(p).FieldByName("x")
+   fmt.Println(field1.Tag,ok1)            // my tag true
+   field2, ok2 := reflect.TypeOf(&p).Elem().FieldByName("z")
+   fmt.Println(field2.Tag,ok2)            //  false
 }
 
 
@@ -308,9 +346,17 @@ func adder(i int) func(int) int {   // Closure
 type binFunc func(int, int) int
 
 func leak() *int {
-  var i int = 88
-  return &i                       // local variable will be accessible
-}                                 // as long as there is a reference to it
+   var i int = 88
+   return &i                      // local variable will be accessible to caller
+}                                 // as long as it keeps a reference to it
+
+func callMe(arg int) (result string, err int) {
+   result, err = "", 0            // default values for named result parameters
+   if arg > 10 {
+      result, err = "too big", -1
+   }
+   return                         // implicit result parameters
+}
 
 func testFunctions() {
    fmt.Println("=== FUNCTIONS ===")
@@ -338,6 +384,7 @@ func testFunctions() {
    fmt.Println(f3(5,6))           // -1
 
    fmt.Println(*leak())           // 88
+   fmt.Println(callMe(11))        // 88
 }
 
 
@@ -430,6 +477,11 @@ func testGoroutines() {
 func testChannels() {
    fmt.Println("=== CHANNELS ===")
 
+   testChannels1()
+   testChannels2()
+}
+
+func testChannels1() {
    // Generate n random ints
    produce := func(c chan int, n int) {
       defer close(c)
@@ -441,7 +493,7 @@ func testChannels() {
    c := make(chan int)
    go produce(c, 5)
    for i := range c {
-      fmt.Println(i)
+      fmt.Println("Recv: ", i)
    }
 
    // use channel to simulate python generators
@@ -460,6 +512,97 @@ func testChannels() {
    for i := range fib(10) {
       fmt.Println(i)
    }
+
+   ch := make(chan int)
+   stop_ch := make(chan bool)
+   go func(src chan int) {
+      for {
+         select {
+            case src <- rand.Intn(100):
+            case <- stop_ch: {src = nil}
+         }
+      }
+   }(ch)
+   fmt.Println(<-ch, <-ch, <-ch)  // Read from channel
+   stop_ch <- true
+   //fmt.Println(<-ch)            // Channel is closed now
+
+   time.Sleep(1000 * time.Millisecond)    // Let the goroutines finish
+}
+
+func testChannels2() {
+   type work struct {
+      url string                  // Request
+      resp chan *http.Response    // Write response here
+   }
+
+   worker := func (q chan work) {
+      for {
+         item := <- q
+         resp, _ := http.Get(item.url)
+         item.resp <- resp        // Write to response channel
+      }
+   }
+
+   q := make(chan work)
+   go worker(q)
+
+   resp_ch := make(chan *http.Response)
+   q <- work{"http://www.google.com", resp_ch}
+   fmt.Println(<- resp_ch)
+
+   time.Sleep(1000 * time.Millisecond)    // Let the goroutines finish
+}
+
+// ==========
+// Defer
+// ==========
+
+func testDefer() {
+   fmt.Println("=== DEFER ===")
+
+   testDefer1()
+   testDefer2()
+}
+
+func testDefer1() {
+   defer fmt.Println("clean up")  // Called immediately before this func returns
+   fmt.Println("make a mess")
+}
+
+func testDefer2() {
+   i := 5
+   defer func () {
+      fmt.Println(i)              // i will be evaluated right before the 'parent' func returns
+   }()                            // defer will print 100
+   i = 100
+}
+
+
+// ==========
+// Json
+// ==========
+
+type Person struct {   // Annotate fields with tags. Available through reflection.
+   FirstName  string   `json:"first_name"`
+   LastName   string   `json:"last_name"`
+   MiddleName string   `json:"middle_name,omitempty"`
+}
+func (p *Person) String() string {     // Change default "toString"
+   return fmt.Sprintf("[%s] [%s] [%s]", p.FirstName, p.MiddleName, p.LastName)
+}
+
+func testJson() {
+   fmt.Println("=== JSON ===")
+
+   json_string := `{"first_name": "John", "last_name": "Smith"}`
+   person := new(Person)
+   json.Unmarshal([]byte(json_string), person)
+   fmt.Println(person)            // [John] [] [Smith]
+
+   p := Person{FirstName:"Jane", LastName:"Doe"}
+   s, err := json.Marshal(p)
+   fmt.Println(err, string(s))    // <nil> {"first_name":"Jane","last_name":"Doe"}
 }
 
 
@@ -469,9 +612,6 @@ func testChannels() {
 
 func testMisc() {
    fmt.Println("=== MISC ===")
-
-   defer fmt.Println("clean up")  // Called after the func exits
-   fmt.Println("make a mess")
 
    time.Sleep(5 * time.Millisecond)
 
@@ -491,7 +631,11 @@ func main() {
    testFunctions()
    testMethods()
    testInterfaces()
-   testGoroutines()
    testChannels()
+   testDefer()
+   testJson()
    testMisc()
+   testGoroutines()
+   time.Sleep(200 * time.Millisecond)    // Let the goroutines finish
+   // return                             // Explicit return statement for main
 }
