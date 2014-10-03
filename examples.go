@@ -358,6 +358,13 @@ func callMe(arg int) (result string, err int) {
    return                         // implicit result parameters
 }
 
+var ff = func (i int, l ...int) { // variadic function. ... needs to be the last arg
+   fmt.Println(len(l))
+   for _, n := range l {
+	fmt.Println(n)
+   }
+}
+
 func testFunctions() {
    fmt.Println("=== FUNCTIONS ===")
 
@@ -385,6 +392,8 @@ func testFunctions() {
 
    fmt.Println(*leak())           // 88
    fmt.Println(callMe(11))        // 88
+
+   ff(1,[]int{11,22,33}...)       // expand slice using ...
 }
 
 
@@ -479,6 +488,7 @@ func testChannels() {
 
    testChannels1()
    testChannels2()
+   testChannels3()
 }
 
 func testChannels1() {
@@ -490,9 +500,9 @@ func testChannels1() {
       }
    }
 
-   c := make(chan int)
+   c := make(chan int)            // unbuffered channels are synchronous
    go produce(c, 5)
-   for i := range c {
+   for i := range c {             // range will loop until the channel is empty and closed
       fmt.Println("Recv: ", i)
    }
 
@@ -513,7 +523,7 @@ func testChannels1() {
       fmt.Println(i)
    }
 
-   ch := make(chan int)
+   ch := make(chan int, 3)        // buffered channels are asynchronous
    stop_ch := make(chan bool)
    go func(src chan int) {
       for {
@@ -527,7 +537,15 @@ func testChannels1() {
    stop_ch <- true
    //fmt.Println(<-ch)            // Channel is closed now
 
-   time.Sleep(1000 * time.Millisecond)    // Let the goroutines finish
+   ch2 := make(chan rune, 3)
+   ch2 <- 'x'
+   ch2 <- 'y'
+   ch2 <- 'z'
+   close(ch2)
+   fmt.Println("Ch2: ", <- ch2)   // Reading from closed channel. Non-blocking.
+   fmt.Println("Ch2: ", <- ch2)
+   fmt.Println("Ch2: ", <- ch2)
+   fmt.Println("Ch2: ", <- ch2)   // Reading from empty channel will return the rune zero-value
 }
 
 func testChannels2() {
@@ -538,7 +556,7 @@ func testChannels2() {
 
    worker := func (q chan work) {
       for {
-         item := <- q
+         item := <- q             // Get next request from the work q
          resp, _ := http.Get(item.url)
          item.resp <- resp        // Write to response channel
       }
@@ -549,9 +567,38 @@ func testChannels2() {
 
    resp_ch := make(chan *http.Response)
    q <- work{"http://www.google.com", resp_ch}
-   fmt.Println(<- resp_ch)
+   fmt.Println(<- resp_ch)        // Read response
 
-   time.Sleep(1000 * time.Millisecond)    // Let the goroutines finish
+   time.Sleep(1000 * time.Millisecond)
+}
+
+func testChannels3() {
+
+   ch := make(chan rune, 10)      // Channel can hold 10 elements
+   fast_ticker := time.NewTicker(time.Millisecond * 5)
+   slow_ticker := time.NewTicker(time.Millisecond * 100)
+
+   go func(ch chan<- rune) {      // Write-only channel
+      i := 97                     // Has time to fill the buffer before the reader starts
+      for _ = range fast_ticker.C {
+         ch <- rune(i)
+         fmt.Println("3 Sending: " + string(rune(i)))
+         i++
+         if i == 120 {
+            close(ch);
+            fmt.Println("Closing channel");
+            return
+         }
+      }
+   }(ch)
+
+   go func(ch <-chan rune) {      // Read-only channel
+      for _ = range slow_ticker.C {
+         fmt.Println("3 Recv: " + string(<- ch))
+      }
+   }(ch)
+
+   time.Sleep(3000 * time.Millisecond)
 }
 
 // ==========
@@ -619,7 +666,7 @@ func testMisc() {
 }
 
 
-func main() {
+func main() {                     // main has no arguments, no return type
    testTypes()
    testVariables()
    testControlStatements()
@@ -631,11 +678,10 @@ func main() {
    testFunctions()
    testMethods()
    testInterfaces()
-   testChannels()
    testDefer()
    testJson()
-   testMisc()
+   testChannels()
    testGoroutines()
-   time.Sleep(200 * time.Millisecond)    // Let the goroutines finish
-   // return                             // Explicit return statement for main
+   testMisc()
+   // return                      // Implicit return statement for main
 }
