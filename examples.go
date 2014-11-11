@@ -4,12 +4,15 @@ import "fmt"
 import "reflect"
 
 import (
+   "io"
+   "bytes"
    "encoding/json"
    "math/rand"
    "strconv"
    "time"
    "net/http"
    //"crypto"                     // Compile error if import not used
+   //"sort"
 )
 
 // Comment
@@ -56,6 +59,9 @@ func testTypes() {
    t := new(MyInt)                // new returns a pointer to the type
    *t = 6
    _,_ = s,t
+
+   v := []interface{}{1,"ab",2.3} // all the types implement the empty interface
+   fmt.Println(v)                 // [1 ab 2.3]
 }
 
 // ==========
@@ -151,6 +157,13 @@ func testControlStatements() {
       case k < 3: fmt.Println("small")
       case k > 9: fmt.Println("big")
       default: fmt.Println("medium")
+   }
+
+   s := "2"
+   switch s {                     // switch on strings
+      case "0","2","4": i = 0
+      case "1","3","5": i = 1
+      default: i = -1
    }
 }
 
@@ -333,8 +346,8 @@ func sub(x int, y int) int {
    return x - y
 }
 
-func swap(x, y string) (string, string) {  // return multiple results
-   return y, x
+func swap(x, y string) (string, string, string) {  // return multiple results
+   return y, x, y + x
 }
 
 func adder(i int) func(int) int {   // Closure
@@ -363,6 +376,10 @@ var ff = func (i int, l ...int) { // variadic function. ... needs to be the last
    for _, n := range l {
 	fmt.Println(n)
    }
+}
+
+func voidFunc (i int) {           // No return type
+   fmt.Println(i)
 }
 
 func testFunctions() {
@@ -443,6 +460,16 @@ type Evaluable interface {
 }
 func process(e Evaluable) bool {return e.eval()}
 
+type LogReader struct {           // Interface wrapper
+   io.Reader
+}
+
+func (r LogReader) Read(b []byte) (int, error) {
+   n, err := r.Reader.Read(b)     // Read from underlying interface
+   fmt.Println("Read: ", n, err)  // Unmarshall string 
+   return n, err
+}
+
 func testInterfaces() {
    fmt.Println("=== INTERFACES ===")
 
@@ -460,6 +487,11 @@ func testInterfaces() {
                isEvaluable(&Processor{}), // true
                isEvaluable(&Processor{}), // true
                isEvaluable(&Point{}))     // false
+
+   r := LogReader{bytes.NewBufferString("abcde")}
+   b := make([]byte, 10)
+   r.Read(b)
+   fmt.Printf("[[%q]]\n", b)      // [["abcde\x00\x00\x00\x00\x00"]]
 }
 
 
@@ -630,10 +662,11 @@ func testDefer2() {
 // Json
 // ==========
 
-type Person struct {   // Annotate fields with tags. Available through reflection.
+type Person struct {   // Annotate fields with tags. Available through reflection (only exported/uppercase).
    FirstName  string   `json:"first_name"`
    LastName   string   `json:"last_name"`
    MiddleName string   `json:"middle_name,omitempty"`
+   Phones   []string   `json:"phones,omitempty"`
 }
 func (p *Person) String() string {     // Change default "toString"
    return fmt.Sprintf("[%s] [%s] [%s]", p.FirstName, p.MiddleName, p.LastName)
@@ -642,7 +675,7 @@ func (p *Person) String() string {     // Change default "toString"
 func testJson() {
    fmt.Println("=== JSON ===")
 
-   json_string := `{"first_name": "John", "last_name": "Smith"}`
+   json_string := `{"first_name": "John", "last_name": "Smith", "phones": ["555-123-4567","555-321-4321"]}`
    person := new(Person)
    json.Unmarshal([]byte(json_string), person)
    fmt.Println(person)            // [John] [] [Smith]
@@ -650,6 +683,25 @@ func testJson() {
    p := Person{FirstName:"Jane", LastName:"Doe"}
    s, err := json.Marshal(p)
    fmt.Println(err, string(s))    // <nil> {"first_name":"Jane","last_name":"Doe"}
+
+   var f interface{}
+   err = json.Unmarshal([]byte(json_string), &f)
+   dat, _ := json.MarshalIndent(f, "", "  ")
+   fmt.Println(string(dat))
+   m := f.(map[string]interface{})
+   fmt.Println(m["first_name"])   // John
+   fmt.Println(m["phones"])       // [555-123-4567 555-321-4321]
+}
+
+
+// ==========
+// Sorting
+// ==========
+
+func testSorting() {
+   fmt.Println("=== SORTING ===")
+
+   //fmt.Println(sort.Sort())
 }
 
 
@@ -682,6 +734,7 @@ func main() {                     // main has no arguments, no return type
    testJson()
    testChannels()
    testGoroutines()
+   testSorting()
    testMisc()
    // return                      // Implicit return statement for main
 }
