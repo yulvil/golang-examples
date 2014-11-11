@@ -10,7 +10,10 @@ import (
    "math/rand"
    "strconv"
    "time"
+   "io/ioutil"
+   //"net/url"
    "net/http"
+   //"net/http/cookiejar"
    //"crypto"                     // Compile error if import not used
    //"sort"
 )
@@ -508,6 +511,8 @@ func testGoroutines() {
    for i:=0; i<5; i++ {
       go f(i)                     // Not necessarily in order
    }
+
+   time.Sleep(10 * time.Millisecond)
 }
 
 
@@ -582,14 +587,14 @@ func testChannels1() {
 
 func testChannels2() {
    type work struct {
-      url string                  // Request
+      Url string                  // Request
       resp chan *http.Response    // Write response here
    }
 
    worker := func (q chan work) {
       for {
          item := <- q             // Get next request from the work q
-         resp, _ := http.Get(item.url)
+         resp, _ := http.Get(item.Url)
          item.resp <- resp        // Write to response channel
       }
    }
@@ -706,6 +711,32 @@ func testSorting() {
 
 
 // ==========
+// HTTP
+// ==========
+
+func testHttp() {
+   fmt.Println("=== HTTP ===")
+   var Url = "http://www.google.com"
+
+   resp, err := http.Get(Url)     // Default http client
+   fmt.Println(resp, err)
+
+   client := &http.Client{}
+   resp, err = client.Get(Url)    // Custom http client
+   defer resp.Body.Close()
+   body, err := ioutil.ReadAll(resp.Body)
+   fmt.Println(resp, err, string(body))
+
+   //var cookiejar, _ = cookiejar.New(nil)
+   //client = &http.Client{Jar: cookiejar}
+   //resp, err = http.PostForm("http://example.com/form", url.Values{"key": {"Value"}, "id": {"123"}})
+   //defer resp.Body.Close()
+   //body, err = ioutil.ReadAll(resp.Body)
+   //fmt.Println(resp, err, string(body))
+}
+
+
+// ==========
 // Misc
 // ==========
 
@@ -733,6 +764,7 @@ func main() {                     // main has no arguments, no return type
    testDefer()
    testJson()
    testChannels()
+   testHttp()
    testGoroutines()
    testSorting()
    testMisc()
