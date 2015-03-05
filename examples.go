@@ -334,6 +334,38 @@ func testMaps() {
 
 
 // ==========
+// Sets
+// ==========
+
+type set map[string]bool
+
+func (m *set) add(s string) bool {
+   if (*m)[s] != false{
+      return false
+   }
+   (*m)[s] = true
+   return true
+}
+
+func (m *set) size() int {
+   return len(*m)
+}
+
+func testSets() {
+   fmt.Println("=== SETS ===")
+
+   var s = make(set)
+   s.add("abc")
+   s.add("abc")
+   s.add("def")
+   s.add("def")
+   s.add("def")
+   s.add("ghi")
+   fmt.Println(s.size())          // 3
+   fmt.Println(s["abc"], s["z"])  // true false
+}
+
+// ==========
 // Functions
 // ==========
 
@@ -735,6 +767,22 @@ func testHttp() {
    //fmt.Println(resp, err, string(body))
 }
 
+func productHandler(w http.ResponseWriter, r *http.Request) {
+   //key := r.URL.Path[len("/products/"):]
+   switch r.Method {
+   case "GET":
+      // do something
+   case "POST":
+      // do something else
+   default:
+      http.Error(w, "Method Not Allowed", 405)
+   }
+}
+
+func testHttpServer() {
+
+}
+
 
 // ==========
 // Misc
@@ -758,6 +806,7 @@ func main() {                     // main has no arguments, no return type
    testSlices()
    testRanges()
    testMaps()
+   testSets()
    testFunctions()
    testMethods()
    testInterfaces()
