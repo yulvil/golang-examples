@@ -3,12 +3,12 @@ package main
 // print struct template for a given json string
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"unicode"
 )
-import "encoding/json"
-
-// import "bytes"
 
 func main() {
 
@@ -21,29 +21,33 @@ func main() {
 
 	printStructForMap("MyStruct", m)
 
-	//fmt.Printf("%+v\n", m)
+	fmt.Println(strings.Join(structz, "\n"))
+
 }
 
-// var structList[]
+var structz []string
 
 func printStructForMap(name string, m map[string]interface{}) {
-	fmt.Printf("type %s struct {\n", capitalize(name))
+	var b bytes.Buffer
+
+	b.WriteString(fmt.Sprintf("type %s struct {\n", capitalize(name)))
 	for k, v := range m {
 		if v == nil {
-			fmt.Printf("  %s string `json\"%s,omitempty\"`\n", capitalize(k), k)
+			b.WriteString(fmt.Sprintf("  %s string `json\"%s,omitempty\"`\n", capitalize(k), k))
 		} else {
 			switch t := v.(type) {
 			case map[string]interface{}:
-				fmt.Printf("  %s %s `json:\"%s,omitempty\"`\n", capitalize(k), capitalize(k), k)
+				b.WriteString(fmt.Sprintf("  %s %s `json:\"%s,omitempty\"`\n", capitalize(k), capitalize(k), k))
 				printStructForMap(k, v.(map[string]interface{}))
 			case float64:
-				fmt.Printf("  %s int `json\"%s,omitempty\"`\n", capitalize(k), k)
+				b.WriteString(fmt.Sprintf("  %s int `json\"%s,omitempty\"`\n", capitalize(k), k))
 			default:
-				fmt.Printf("  %s %s `json:\"%s,omitempty\"`\n", capitalize(k), t, k)
+				b.WriteString(fmt.Sprintf("  %s %T `json:\"%s,omitempty\"`\n", capitalize(k), t, k))
 			}
 		}
 	}
-	fmt.Printf("}\n")
+	b.WriteString(fmt.Sprintf("}\n"))
+	structz = append(structz, b.String())
 }
 
 func capitalize(s string) string {
