@@ -12,7 +12,7 @@ import (
 
 func main() {
 
-	var j = `{"data": null, "id": 1234, "error": {"code":200, "message": "abc"}}`
+	var j = `{"data": null, "id": 1234, "error": {"code":200, "message": "abc"}, "myarr": ["s1", "s2", "s3"]}`
 
 	var m map[string]interface{}
 	if err := json.Unmarshal([]byte(j), &m); err != nil {
@@ -39,6 +39,8 @@ func printStructForMap(name string, m map[string]interface{}) {
 			case map[string]interface{}:
 				b.WriteString(fmt.Sprintf("  %s %s `json:\"%s,omitempty\"`\n", capitalize(k), capitalize(k), k))
 				printStructForMap(k, v.(map[string]interface{}))
+			case []interface{}:
+				b.WriteString(fmt.Sprintf("  %s []string `json:\"%s,omitempty\"`\n", capitalize(k), k))
 			case float64:
 				b.WriteString(fmt.Sprintf("  %s int `json\"%s,omitempty\"`\n", capitalize(k), k))
 			default:
