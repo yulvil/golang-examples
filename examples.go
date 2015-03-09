@@ -16,6 +16,7 @@ import (
    //"net/http/cookiejar"
    //"crypto"                     // Compile error if import not used
    //"sort"
+   "sync"
 )
 
 // Comment
@@ -537,14 +538,18 @@ func testInterfaces() {
 func testGoroutines() {
    fmt.Println("=== GOROUTINES ===")
 
+   wg := &sync.WaitGroup{}
+
    f := func(i int) {
       fmt.Println("go ", i)
+      wg.Done()
    }
    for i:=0; i<5; i++ {
+      wg.Add(1)
       go f(i)                     // Not necessarily in order
    }
 
-   time.Sleep(10 * time.Millisecond)
+   wg.Wait()
 }
 
 
@@ -623,22 +628,27 @@ func testChannels2() {
       resp chan *http.Response    // Write response here
    }
 
+   wg := &sync.WaitGroup{}
+
    worker := func (q chan work) {
-      for {
-         item := <- q             // Get next request from the work q
+      defer wg.Done()
+      for item := range q {       // Read until channel is empty and closed
          resp, _ := http.Get(item.Url)
          item.resp <- resp        // Write to response channel
       }
    }
 
    q := make(chan work)
+
+   wg.Add(1)
    go worker(q)
 
    resp_ch := make(chan *http.Response)
    q <- work{"http://www.google.com", resp_ch}
+   close(q)
    fmt.Println(<- resp_ch)        // Read response
 
-   time.Sleep(1000 * time.Millisecond)
+   wg.Wait()
 }
 
 func testChannels3() {
@@ -647,27 +657,37 @@ func testChannels3() {
    fast_ticker := time.NewTicker(time.Millisecond * 5)
    slow_ticker := time.NewTicker(time.Millisecond * 100)
 
+   wg := &sync.WaitGroup{}
+
+   wg.Add(1)
    go func(ch chan<- rune) {      // Write-only channel
       i := 97                     // Has time to fill the buffer before the reader starts
+      defer wg.Done()
       for _ = range fast_ticker.C {
-         ch <- rune(i)
+         ch <- rune(i)            // Write blocks when the buffer is full
          fmt.Println("3 Sending: " + string(rune(i)))
          i++
-         if i == 120 {
-            close(ch);
+         if i == 123 {
             fmt.Println("Closing channel");
+            close(ch);
             return
          }
       }
    }(ch)
 
+   wg.Add(1)
    go func(ch <-chan rune) {      // Read-only channel
+      defer wg.Done()
       for _ = range slow_ticker.C {
-         fmt.Println("3 Recv: " + string(<- ch))
+         resp, ok := <- ch        // Read blocks when the buffer is empty
+         if !ok {                 // Channel is empty and closed
+            return
+         }
+         fmt.Println("3 Recv: " + string(resp))
       }
    }(ch)
 
-   time.Sleep(3000 * time.Millisecond)
+   wg.Wait()
 }
 
 // ==========
