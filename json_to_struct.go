@@ -61,7 +61,7 @@ func printStructForMap(name string, m map[string]interface{}) {
 				if vv == float64(int64(vv)) {
 					b.WriteString(fmt.Sprintf("  %s int `json\"%s,omitempty\"`\n", capitalize(k), k))
 				} else {
-					b.WriteString(fmt.Sprintf("  %s float `json\"%s,omitempty\"`\n", capitalize(k), k))
+					b.WriteString(fmt.Sprintf("  %s float64 `json\"%s,omitempty\"`\n", capitalize(k), k))
 				}
 			default:
 				b.WriteString(fmt.Sprintf("  %s %T `json:\"%s,omitempty\"`\n", capitalize(k), t, k))
