@@ -17,6 +17,7 @@ import (
    //"crypto"                     // Compile error if import not used
    //"sort"
    "sync"
+   "sync/atomic"
 )
 
 // Comment
@@ -66,6 +67,22 @@ func testTypes() {
 
    v := []interface{}{1,"ab",2.3} // all the types implement the empty interface
    fmt.Println(v)                 // [1 ab 2.3]
+
+   for _, item := range v {
+      switch v := item.(type) {
+      case string:
+         fmt.Println("string", v)
+      case int, int32, int64:
+         fmt.Println("int", v)
+      case float32, float64:
+         fmt.Println("float", v)
+      default:
+         fmt.Println("unknown")
+      }
+   }
+
+   var r interface{io.Reader} = bytes.NewReader([]byte{0,1})
+   fmt.Println(r.(io.Reader))     // type assertion
 }
 
 // ==========
@@ -331,6 +348,17 @@ func testMaps() {
 
    m4 := map[string]int{}         // same as using make
    delete(m4, "key8")             // silent, no return values
+
+   // Any comparable type may be used as a map key.
+   d := map[interface{}]bool{}
+   d[42] = true
+   d[&Point{}] = true
+   d[Point{3, 4}] = true
+   d[ioutil.Discard] = true
+   
+   e := map[Point]int{}
+   e[Point{4,5}] = 9
+   e[Point{7,8}] = 15
 }
 
 
@@ -476,6 +504,12 @@ func testMethods() {
    fmt.Println((&State{"25", "CA"}).toString()) // CA 25
    fmt.Println((&State{"25", "CA"}).setCode("CB")) // &{25 CB}
    fmt.Println(MyByte(7).reverse()) // 248
+   
+   var f = MyByte.reverse         // function
+   f(MyByte(3))
+
+   var g = MyByte(3).reverse      // closure!
+   g()
 }
 
 
@@ -748,6 +782,12 @@ func testJson() {
    m := f.(map[string]interface{})
    fmt.Println(m["first_name"])   // John
    fmt.Println(m["phones"])       // [555-123-4567 555-321-4321]
+
+   b, _ := json.Marshal(struct {  // anonymous struct
+      ID   int
+      Name string
+   }{42, "The answer"})
+   fmt.Println(string(b))         // {"ID":42,"Name":"The answer"}
 }
 
 
@@ -759,6 +799,28 @@ func testSorting() {
    fmt.Println("=== SORTING ===")
 
    //fmt.Println(sort.Sort())
+}
+
+
+// ==========
+// Sync
+// ==========
+
+func testSync() {
+   fmt.Println("=== SYNC ===")
+
+   var viewCount struct {         // embedding a mutex in an anonymous struct
+      sync.Mutex
+      n int64
+   }
+   viewCount.Lock()
+   viewCount.n++
+   viewCount.Unlock()
+   
+   var myCounter int64 = 100
+   atomic.AddInt64(&myCounter, 1)
+   atomic.AddInt64(&myCounter, 1)
+   fmt.Println(myCounter)
 }
 
 
@@ -836,6 +898,7 @@ func main() {                     // main has no arguments, no return type
    testHttp()
    testGoroutines()
    testSorting()
+   testSync()
    testMisc()
    // return                      // Implicit return statement for main
 }
