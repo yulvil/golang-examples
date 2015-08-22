@@ -4,18 +4,20 @@ import "fmt"
 import "reflect"
 
 import (
-   "io"
    "bytes"
    "encoding/json"
+   "io"
+   "io/ioutil"
    "math/rand"
    "strconv"
    "time"
-   "io/ioutil"
    //"net/url"
    "net/http"
    //"net/http/cookiejar"
    //"crypto"                     // Compile error if import not used
    //"sort"
+   "os"
+   "strings"
    "sync"
    "sync/atomic"
 )
@@ -125,6 +127,11 @@ func testVariables() {
 
    fmt.Println(reflect.TypeOf(PI), reflect.TypeOf(zz)) // float64 int
 
+   // Numeric constants are high-precision values.
+   const Big1 = 98765432109876543210987654321098765432109876543210
+   const Big2 = 12345678901234567890123456789012345678901234567890
+   fmt.Println(float64(Big1-Big2))
+
    { var i=0; var j=1; i = i+j; } // i, j only accessible within block
 
    const (
@@ -186,6 +193,13 @@ func testControlStatements() {
       case "1","3","5": i = 1
       default: i = -1
    }
+
+   t := Point{1, 2}
+   switch t {                     // switch on structs (anything comparable)
+      case Point{0,0}: i=0
+      case Point{1,0}: i=1
+      case Point{1,2}: i=2
+   }
 }
 
 
@@ -241,6 +255,7 @@ func testStructs() {
 // ==========
 
 // Arrays max size is uint64
+// fixed size, cannot be resized
 
 func testArrays() {
    fmt.Println("=== ARRAYS ===")
@@ -569,6 +584,9 @@ func testInterfaces() {
 // Goroutines
 // ==========
 
+// Goroutines run in the same address space.
+// Access to shared memory must be synchronized.
+
 func testGoroutines() {
    fmt.Println("=== GOROUTINES ===")
 
@@ -582,6 +600,13 @@ func testGoroutines() {
       wg.Add(1)
       go f(i)                     // Not necessarily in order
    }
+
+   g := func() int {
+      time.Sleep(1 * time.Second)
+      return 10
+   }
+   wg.Add(1)
+   go f(g())                 // Arguments g() evaluated by current goroutine
 
    wg.Wait()
 }
@@ -876,6 +901,14 @@ func testMisc() {
    time.Sleep(5 * time.Millisecond)
 
    // panic(http.ListenAndServe(":8080", http.FileServer(http.Dir("/usr/share/doc"))))
+
+   r := strings.NewReader("Hello, Reader!")
+   b := make([]byte,8)
+   len, err := r.Read(b)
+   fmt.Println(len, err, string(b))
+
+   data := bytes.NewBufferString(`asdf 1234`)
+   io.Copy(os.Stdout, data)       // Copy(dst Writer, src Reader)
 }
 
 
