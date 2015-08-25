@@ -127,12 +127,25 @@ func testVariables() {
 
    fmt.Println(reflect.TypeOf(PI), reflect.TypeOf(zz)) // float64 int
 
+   { var i=0; var j=1; i = i+j; } // i, j only accessible within block
+}
+
+
+// ==========
+// Const
+// ==========
+
+type Weekday uint8
+func (w Weekday) String() string { return weekday[w] }
+var weekday = []string{"Monday", "Tuesday", "Wednesday"}
+
+func testConst() {
+   fmt.Println("=== CONST ===")
+
    // Numeric constants are high-precision values.
    const Big1 = 98765432109876543210987654321098765432109876543210
    const Big2 = 12345678901234567890123456789012345678901234567890
    fmt.Println(float64(Big1-Big2))
-
-   { var i=0; var j=1; i = i+j; } // i, j only accessible within block
 
    const (
       Monday = 1
@@ -141,11 +154,11 @@ func testVariables() {
    )
 
    const (
-      Mon = iota                  // iota starts at zero
+      Mon Weekday = iota          // iota starts at zero
       Tue                         // incremented automatically
       Wed                         // within the same const ()
    )
-   fmt.Println(Mon,Tue,Wed)       // 0 1 2
+   fmt.Println(Mon,Tue,Wed)       // Monday Tuesday Wednesday
 
    type Letter rune               // Simulate enum
    const (
@@ -758,6 +771,7 @@ func testDefer() {
 
    testDefer1()
    testDefer2()
+   testDefer3()
 }
 
 func testDefer1() {
@@ -767,9 +781,17 @@ func testDefer1() {
 
 func testDefer2() {
    i := 5
-   defer func () {
+   defer func () {                // closure
       fmt.Println(i)              // i will be evaluated right before the 'parent' func returns
    }()                            // defer will print 100
+   i = 100
+}
+
+func testDefer3() {
+   i := 5
+   defer func (i int) {
+      fmt.Println(i)              // not a closure, i will be evaluated now
+   }(i)                           // defer will print 5
    i = 100
 }
 
@@ -968,6 +990,7 @@ func testMisc() {
 func main() {                     // main has no arguments, no return type
    testTypes()
    testVariables()
+   testConst()
    testControlStatements()
    testStructs()
    testArrays()
