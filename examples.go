@@ -15,7 +15,7 @@ import (
    "net/http"
    //"net/http/cookiejar"
    //"crypto"                     // Compile error if import not used
-   //"sort"
+   "sort"
    "os"
    "strings"
    "sync"
@@ -820,10 +820,63 @@ func testJson() {
 // Sorting
 // ==========
 
+type Organ struct {
+   Name   string
+   Weight Grams
+}
+
+func (o *Organ) String() string { return fmt.Sprintf("%v (%v)", o.Name, o.Weight) }
+
+type Organs []*Organ
+
+func (s Organs) Len() int      { return len(s) }
+func (s Organs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+type ByName struct{ Organs }
+
+func (s ByName) Less(i, j int) bool { return s.Organs[i].Name < s.Organs[j].Name }
+
+type ByWeight struct{ Organs }
+
+func (s ByWeight) Less(i, j int) bool { return s.Organs[i].Weight < s.Organs[j].Weight }
+
+type Grams int
+
+func (g Grams) String() string { return fmt.Sprintf("%dg", int(g)) }
+
+func printOrgans(msg string, o Organs) {
+	fmt.Println(msg)
+	for _, v := range o {
+		fmt.Println(" ", v)
+	}
+}
+
+func Reverse(data sort.Interface) sort.Interface {
+	return &reverse{data}
+}
+
+type reverse struct{ sort.Interface }
+
+func (r reverse) Less(i, j int) bool {
+	return r.Interface.Less(j, i)
+}
+
 func testSorting() {
    fmt.Println("=== SORTING ===")
 
-   //fmt.Println(sort.Sort())
+   s := []*Organ{{"brain", 1340}, {"heart", 290}, {"liver", 1494}, {"pancreas", 131}, {"spleen", 162}, {"bladder", 238}}
+
+   sort.Sort(ByWeight{s})
+   printOrgans("Organs by weight", s)
+
+   sort.Sort(ByName{s})
+   printOrgans("Organs by name", s)
+
+   sort.Sort(Reverse(ByWeight{s}))
+   printOrgans("Organs by weight (descending)", s)
+
+   sort.Sort(Reverse(ByName{s}))
+   printOrgans("Organs by name (descending)", s)
 }
 
 
