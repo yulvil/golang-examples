@@ -4,6 +4,7 @@ import "fmt"
 import "reflect"
 
 import (
+   "bufio"
    "bytes"
    "encoding/json"
    "io"
@@ -233,6 +234,17 @@ func (m *Model) call() int {return 10}
 type Road struct {
    Model                          // Embedded type. No name.
    loc string
+}
+
+// user _ struct{} to prevent unkeyed literals
+// i.e. force construction using ProgInfo{Flags:1, Reguse:2, Regset:3, Regindex:4}
+// ProgInfo{1, 2, 3, 4} will generate an error "too few values in struct initializer" 
+type ProgInfo struct {
+ Flags    uint32
+ Reguse   uint64
+ Regset   uint64
+ Regindex uint64
+ _        struct{}
 }
 
 func testStructs() {
@@ -967,6 +979,25 @@ func testHttpServer() {
 
 
 // ==========
+// Buffer
+// ==========
+
+func testBuffer() {
+   fmt.Println("=== BUFFER ===")
+
+   var b bytes.Buffer
+   var w = bufio.NewWriter(&b)
+   w.Write([]byte("Hello "))
+   w.WriteString("World!")
+   w.Flush()
+   fmt.Println(b.String())
+
+   var bu = bytes.NewBufferString("Hello").String()
+   fmt.Println(bu)
+}
+
+
+// ==========
 // Misc
 // ==========
 
@@ -982,7 +1013,7 @@ func testMisc() {
    len, err := r.Read(b)
    fmt.Println(len, err, string(b))
 
-   data := bytes.NewBufferString(`asdf 1234`)
+   data := bytes.NewBufferString("asdf 1234\n")
    io.Copy(os.Stdout, data)       // Copy(dst Writer, src Reader)
 }
 
@@ -1008,6 +1039,7 @@ func main() {                     // main has no arguments, no return type
    testGoroutines()
    testSorting()
    testSync()
+   testBuffer()
    testMisc()
    // return                      // Implicit return statement for main
 }
