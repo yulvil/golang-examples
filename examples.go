@@ -355,6 +355,10 @@ func testRanges() {
    for _, c := range "abc123" {
       fmt.Printf("%c\n", c)
    }
+
+   for i := range [5]struct{}{} { // 0,1,2,3,4 (no allocation)
+      fmt.Println(i)
+   }
 }
 
 // ==========
@@ -847,6 +851,10 @@ func testJson() {
       Name string
    }{42, "The answer"})
    fmt.Println(string(b))         // {"ID":42,"Name":"The answer"}
+
+   var myjson = []byte(`{"a":1, "b":2, "c": [10,11,12]}`)
+   var bb = &bytes.Buffer{}
+   json.Indent(bb, myjson, "", "  ")
 }
 
 
