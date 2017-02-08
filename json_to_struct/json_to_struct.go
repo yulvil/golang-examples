@@ -39,10 +39,10 @@ var structz = make(map[string]string)
 func printStructForMap(name string, m map[string]interface{}) {
 	var b bytes.Buffer
 
-	b.WriteString(fmt.Sprintf("type %s struct {\n", capitalize(name)))
+	b.WriteString(fmt.Sprintf("// %s ...\ntype %s struct {\n", capitalize(name), capitalize(name)))
 	for k, v := range m {
 		if v == nil {
-			b.WriteString(fmt.Sprintf("  %s string `json\"%s,omitempty\"`\n", capitalize(k), k))
+			b.WriteString(fmt.Sprintf("  %s string `json:\"%s,omitempty\"`\n", capitalize(k), k))
 		} else {
 			switch t := v.(type) {
 			case map[string]interface{}:
@@ -59,9 +59,9 @@ func printStructForMap(name string, m map[string]interface{}) {
 			case float64:
 				vv := v.(float64)
 				if vv == float64(int64(vv)) {
-					b.WriteString(fmt.Sprintf("  %s int `json\"%s,omitempty\"`\n", capitalize(k), k))
+					b.WriteString(fmt.Sprintf("  %s int `json:\"%s,omitempty\"`\n", capitalize(k), k))
 				} else {
-					b.WriteString(fmt.Sprintf("  %s float64 `json\"%s,omitempty\"`\n", capitalize(k), k))
+					b.WriteString(fmt.Sprintf("  %s float64 `json:\"%s,omitempty\"`\n", capitalize(k), k))
 				}
 			default:
 				b.WriteString(fmt.Sprintf("  %s %T `json:\"%s,omitempty\"`\n", capitalize(k), t, k))
